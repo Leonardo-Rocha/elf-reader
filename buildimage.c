@@ -17,8 +17,12 @@
 #define BOOTLOADER_SIG_OFFSET 0x1fe /* offset for boot loader signature */
 #define WORD_SIZE 4					/* size of the word used in 32 Bit Architecture */
 #define HALF_WORD_SIZE 2
+#define BUFFER_SIZE 200 			/* error buffer size in bytes */
 
-int architecture_bit_width = 32;
+char error_buffer[BUFFER_SIZE]; 
+int architecture_bit_width = 32; 	/* may be 64 in other arcthitectures */
+
+int handle_file_open(FILE *file_stream, const char *file_name, const char* mode);
 
 /* Reads the contents of the elf header and store them. */
 void read_elf_header(Elf32_Ehdr *ehdr_pointer, FILE *execfile)
@@ -57,7 +61,7 @@ void read_program_header(Elf32_Phdr *phdr_pointer, FILE *execfile)
  * Checks the magic number
  * to verify if it's an ELF file
  * 
- *  e_Ident: first bytes in a elf header
+ *  e_Ident: first bytes in an ELF header
  *
  *  returns: zero if checked succesfully
  *           returns -1 on error (if the file isn't in proper ELF encoding)
@@ -161,8 +165,16 @@ int main(int argc, char **argv)
 
 	Elf32_Phdr *boot_program_header;   //bootblock ELF program header
 	Elf32_Phdr *kernel_program_header; //kernel ELF program header
-
+	
+	//TODO: function to check if the args were used correctly
+	/* Example:
+		if (argc!= 2) 
+			{fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+			return 1;
+		}
+	*/
 	//TODO: function to read files and handle errors
+	handle_file_open(IMAGE_FILE, "wb");
 
 	/* build image file */
 	imagefile = fopen(IMAGE_FILE, "wb");
@@ -181,7 +193,24 @@ int main(int argc, char **argv)
 	if (!strncmp(argv[1], "--extended", 11))
 	{
 		/* print info */
-	}
+	} 
 
 	return 0;
 } // ends main()
+
+/*
+ * Function:  handle_file_open 
+ * --------------------
+ * Tries to open the given file and handle errors
+ * 
+ *  file_stream: pointer to assign the file_stream if the file has been opened
+ *	file_name: path for the file to be open	
+ *	mode: file open mode (e.g. - r, w, rb...)
+ * 
+ *  returns: zero if the file was opened succesfully
+ *           returns -1 on error
+ */
+int handle_file_open(FILE *file_stream, const char *file_name, const char* mode) 
+{
+	file_stream = fopen(file_name, mode);
+}
