@@ -1,7 +1,7 @@
 /* Author(s): Gabriel Chiquetto (201719050309) & Leonardo Rocha (201719050465)
  * Creates operating system image suitable for placement on a boot disk
 */
-/* TODO: Comment on the status of your submission.  Approx 1/5 implemented. */
+/* TODO: Comment on the status of your submission.  Approx 2/5 implemented. */
 #include <assert.h>
 #include <elf.h>
 #include <errno.h>
@@ -18,9 +18,6 @@
 #define WORD_SIZE 4					/* size of the word used in 32 Bit Architecture */
 #define HALF_WORD_SIZE 2
 #define BUFFER_SIZE 200 			/* error buffer size in bytes */
-
-#define bootblock_arg(ARGC) ((ARGC) - 2)
-#define kernel_arg(ARGC) ((ARGC) - 1)
 
 char error_buffer[BUFFER_SIZE]; 
 int architecture_bit_width = 32; 	/* may be 64 in other arcthitectures */
@@ -182,7 +179,6 @@ void extended_opt(Elf32_Phdr *bph, int k_phnum, Elf32_Phdr *kph, int num_sec)
 
 	/* print kernel size in sectors */
 }
-// more helper functions...
 
 /* MAIN */
 // ignore the --vm argument when implementing (project 1)
