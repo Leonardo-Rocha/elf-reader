@@ -19,6 +19,9 @@
 #define HALF_WORD_SIZE 2
 #define BUFFER_SIZE 200 			/* error buffer size in bytes */
 
+#define bootblock_arg(ARGC) ((ARGC) - 2)
+#define kernel_arg(ARGC) ((ARGC) - 1)
+
 char error_buffer[BUFFER_SIZE]; 
 int architecture_bit_width = 32; 	/* may be 64 in other arcthitectures */
 
@@ -26,7 +29,7 @@ int handle_file_open(FILE *file_stream, const char *file_name, const char* mode)
 
 /* Reads the contents of the elf header and store them. */
 void read_elf_header(Elf32_Ehdr *ehdr_pointer, FILE *execfile)
-{
+{	
 	fread(&(ehdr_pointer->e_type), HALF_WORD_SIZE, 1, execfile);
 	fread(&(ehdr_pointer->e_machine), HALF_WORD_SIZE, 1, execfile);
 	fread(&(ehdr_pointer->e_version), WORD_SIZE, 1, execfile);
@@ -87,41 +90,67 @@ void read_program_entries(Elf32_Phdr *phdr, uint16_t _phnum, FILE *execfile)
 	}
 }
 
-/* Reads in an executable file in ELF format*/
+/*
+ * Function:  read_exec_file 
+ * --------------------
+ * Reads in an executable file in ELF format
+ * 
+ *  execfile: executable file stream to be read
+ *	file_name: path for the file to be open	
+ *	ehdr: ELF Header reference to be stored
+ * 
+ *  returns: Program Header if the file was opened succesfully
+ *           returns NULL if the file couldn't be open or wasn't in ELF format
+ */
 Elf32_Phdr *read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr)
 {
 	Elf32_Phdr *program_table_header;
-	Elf32_Ehdr *ehdr_pointer;
+	Elf32_Ehdr *ehdr_pointer; /* variables to enhance */
+	FILE *execfile_pointer;   /* code readability     */
 	uint16_t num_program_entries;
 
+	handle_file_open(filename, "rb", *execfile);
+
 	if (execfile != NULL && *execfile != NULL)
-	{
+	{	
 		ehdr = (Elf32_Ehdr **) malloc(sizeof(Elf32_Ehdr *));
 		*ehdr = (Elf32_Ehdr *) malloc(sizeof(Elf32_Ehdr));
-		*execfile = fopen(filename, "rb");
+
 		ehdr_pointer = *ehdr;
-		//Read e_ident
-		fread(&(ehdr_pointer->e_ident), 1, 16, *execfile);
+		execfile_pointer = *execfile;
+
+		// read e_ident
+		fread(&(ehdr_pointer->e_ident), 1, EI_NIDENT, execfile_pointer);
 		if (check_e_Ident(ehdr_pointer->e_ident) != -1)
-		{
-			num_program_entries = (unsigned short int) ehdr_pointer->e_phnum;
+		{	
 			//Read each term in the ELF Header
-			read_elf_header(*ehdr, *execfile);
+			read_elf_header(ehdr_pointer, execfile_pointer);
+
+			num_program_entries = (uint16_t) ehdr_pointer->e_phnum;
+
 			program_table_header = (Elf32_Phdr *) malloc(num_program_entries * sizeof(Elf32_Phdr));
-			read_program_entries(program_table_header, num_program_entries, *execfile);
-			//TODO: read sections
+			read_program_entries(program_table_header, num_program_entries, execfile_pointer);
+
+			return program_table_header;
 		}
-		else
-			;
-		//TODO: ERROR MESSAGE INVALID FORMAT
+		else // file not in proper elf format
+		{
+			fprintf(stderr, "File isn't in proper ELF format: \"%s\" \n", filename);
+			return NULL;
+		}	
 	}
 	else
+	{	// File open error
+		snprintf(error_buffer, BUFFER_SIZE, "Could not open file \"%s\"", filename);
+		perror(error_buffer);
 		return NULL;
+	}
 }
 
 /* Writes the bootblock to the image file */
 void write_bootblock(FILE **imagefile, FILE *bootfile, Elf32_Ehdr *boot_header, Elf32_Phdr *boot_phdr)
 {
+
 }
 
 /* Writes the kernel to the image file */
@@ -166,18 +195,15 @@ int main(int argc, char **argv)
 	Elf32_Phdr *boot_program_header;   //bootblock ELF program header
 	Elf32_Phdr *kernel_program_header; //kernel ELF program header
 	
-	//TODO: function to check if the args were used correctly
-	/* Example:
-		if (argc!= 2) 
-			{fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
-			return 1;
-		}
-	*/
-	//TODO: function to read files and handle errors
-	handle_file_open(IMAGE_FILE, "wb");
-
+	/* check if the args were used correctly */
+	if (argc < 3 || argc > 4) 
+	{
+		fprintf(stderr, "Usage: %s %s \n", argv[0], ARGS);
+		return 1;
+	}
+	
 	/* build image file */
-	imagefile = fopen(IMAGE_FILE, "wb");
+	handle_file_open(IMAGE_FILE, "wb", imagefile);
 
 	/* read executable bootblock file */
 
@@ -195,6 +221,10 @@ int main(int argc, char **argv)
 		/* print info */
 	} 
 
+	fclose(imagefile);
+	fclose(bootfile);
+	fclose(kernelfile);
+
 	return 0;
 } // ends main()
 
@@ -210,7 +240,14 @@ int main(int argc, char **argv)
  *  returns: zero if the file was opened succesfully
  *           returns -1 on error
  */
-int handle_file_open(FILE *file_stream, const char *file_name, const char* mode) 
+int handle_file_open(FILE *file_stream, const char* mode, const char *file_name) 
 {
 	file_stream = fopen(file_name, mode);
+	if (file_stream == NULL) {
+		snprintf(error_buffer, BUFFER_SIZE, "Could not open file \"%s\"", file_name);
+		perror(error_buffer);
+		return -1;
+	}
+	
+	return 0;
 }
