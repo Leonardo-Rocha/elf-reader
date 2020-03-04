@@ -17,10 +17,50 @@
 #define BOOTLOADER_SIG_OFFSET 0x1fe /* offset for boot loader signature */
 // more defines...
 
+int architectureBitWidths = 32;
+
 /* Reads in an executable file in ELF format*/
 Elf32_Phdr * read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr){
- 
-  return NULL;
+	if(execfile & *execfile != NULL){
+			*ehdr = (Elf32_Ehdr *) malloc(sizeof(Elf32_Ehdr*));
+			*execfile = fopen(filename, "rb");
+			//Read e_ident
+			fread(&(*ehdr->e_ident), 1, 16, *execfile);
+			if(checkE_Ident(&(*ehdr->e_ident)) != -1){
+				//Read each term in the ELF Header
+				fread(&(*ehdr->e_type), 2, 1, *execfile);
+				fread(&(*ehdr->e_machine), 2, 1, *execfile);
+				fread(&(*ehdr->e_version), 4, 1, *execfile);
+				fread(&(*ehdr->e_entry), architectureBitWidths, 1, *execfile);
+				fread(&(*ehdr->e_phoff), architectureBitWidths, 1, *execfile);
+				fread(&(*ehdr->e_shoff), architectureBitWidths, 1, *execfile);
+				fread(&(*ehdr->e_flags), 4, 1, *execfile);
+				fread(&(*ehdr->e_ehsize), 2, 1, *execfile);
+				fread(&(*ehdr->e_phentsize), 2, 1, *execfile);
+				fread(&(*ehdr->e_pnum), 2, 1, *execfile);
+				fread(&(*ehdr->e_shentsize), 2, 1, *execfile);
+				fread(&(*ehdr->e_shnum), 2, 1, *execfile);
+				fread(&(*ehdr->e_shstrndx), 2, 1, *execfile);	
+			}
+			else;
+			//TODO: ERROR MESSAGE
+
+
+
+	}
+ 	else
+		return NULL;
+}
+
+void read_Elf_Header(Elf32_Ehdr **ehdr)
+
+int checkE_Ident(unsigned char* e_Ident){
+	if(e_Ident[0] == 0x7f && e_Ident[1] == 'E' && e_Ident[2] == 'L' && e_Ident[3] == 'F' ){
+		if(e_Ident[4] == ELFCLASS64)
+		 architectureBitWidths = 64;
+		return 0;
+	}else
+		return -1;
 }
 
 /* Writes the bootblock to the image file */
@@ -66,31 +106,33 @@ void extended_opt(Elf32_Phdr *bph, int k_phnum, Elf32_Phdr *kph, int num_sec){
 /* MAIN */
 // ignore the --vm argument when implementing (project 1)
 int main(int argc, char **argv){
-  FILE *kernelfile, *bootfile,*imagefile;  //file pointers for bootblock,kernel and image
-  Elf32_Ehdr *boot_header = malloc(sizeof(Elf32_Ehdr));//bootblock ELF header
-  Elf32_Ehdr *kernel_header = malloc(sizeof(Elf32_Ehdr));//kernel ELF header
+  	FILE *kernelfile, *bootfile,*imagefile;  //file pointers for bootblock,kernel and image
+  	Elf32_Ehdr *boot_header = malloc(sizeof(Elf32_Ehdr));//bootblock ELF header
+  	Elf32_Ehdr *kernel_header = malloc(sizeof(Elf32_Ehdr));//kernel ELF header
 
-  Elf32_Phdr *boot_program_header; //bootblock ELF program header
-  Elf32_Phdr *kernel_program_header; //kernel ELF program header
+  	Elf32_Phdr *boot_program_header; //bootblock ELF program header
+  	Elf32_Phdr *kernel_program_header; //kernel ELF program header
 
-  /* build image file */
+  	/* build image file */
+  	imagefile = fopen(IMAGE_FILE, "wb")
 
-  /* read executable bootblock file */  
 
-  /* write bootblock */  
+  	/* read executable bootblock file */  
 
-  /* read executable kernel file */
+  	/* write bootblock */  
 
-  /* write kernel segments to image */
+  	/* read executable kernel file */
 
-  /* tell the bootloader how many sectors to read to load the kernel */
+  	/* write kernel segments to image */
 
-  /* check for  --extended option */
-  if(!strncmp(argv[1],"--extended",11)){
-	/* print info */
-  }
+  	/* tell the bootloader how many sectors to read to load the kernel */
+
+  	/* check for  --extended option */
+  	if(!strncmp(argv[1],"--extended",11)){
+		/* print info */
+  	}
   
-  return 0;
+  	return 0;
 } // ends main()
 
 
