@@ -21,29 +21,22 @@ int architectureBitWidths = 32;
 
 /* Reads in an executable file in ELF format*/
 Elf32_Phdr * read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr){
+	
+	Elf32_Phdr* program_table_header;
 	if(execfile & *execfile != NULL){
-			*ehdr = (Elf32_Ehdr *) malloc(sizeof(Elf32_Ehdr*));
+			*ehdr = (Elf32_Ehdr *) malloc(sizeof(Elf32_Ehdr));
 			*execfile = fopen(filename, "rb");
 			//Read e_ident
 			fread(&(*ehdr->e_ident), 1, 16, *execfile);
 			if(checkE_Ident(&(*ehdr->e_ident)) != -1){
 				//Read each term in the ELF Header
-				fread(&(*ehdr->e_type), 2, 1, *execfile);
-				fread(&(*ehdr->e_machine), 2, 1, *execfile);
-				fread(&(*ehdr->e_version), 4, 1, *execfile);
-				fread(&(*ehdr->e_entry), architectureBitWidths, 1, *execfile);
-				fread(&(*ehdr->e_phoff), architectureBitWidths, 1, *execfile);
-				fread(&(*ehdr->e_shoff), architectureBitWidths, 1, *execfile);
-				fread(&(*ehdr->e_flags), 4, 1, *execfile);
-				fread(&(*ehdr->e_ehsize), 2, 1, *execfile);
-				fread(&(*ehdr->e_phentsize), 2, 1, *execfile);
-				fread(&(*ehdr->e_pnum), 2, 1, *execfile);
-				fread(&(*ehdr->e_shentsize), 2, 1, *execfile);
-				fread(&(*ehdr->e_shnum), 2, 1, *execfile);
-				fread(&(*ehdr->e_shstrndx), 2, 1, *execfile);	
+				read_Elf_Header(ehdr, execfile);
+				program_table_header = (Elf32_Phdr*)	malloc(sizeof(Elf32_Phdr));
+				
+
 			}
 			else;
-			//TODO: ERROR MESSAGE
+			//TODO: ERROR MESSAGE INVALID FORMAT
 
 
 
@@ -52,12 +45,47 @@ Elf32_Phdr * read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr){
 		return NULL;
 }
 
-void read_Elf_Header(Elf32_Ehdr **ehdr)
+void read_Elf_Header(Elf32_Ehdr **ehdr, FILE **execfile){
+		//TODO: USE DEFINES INSTEAD OF RAW VALUES
+		fread(&(*ehdr->e_type), 2, 1, *execfile);
+		fread(&(*ehdr->e_machine), 2, 1, *execfile);
+		fread(&(*ehdr->e_version), 4, 1, *execfile);
+		fread(&(*ehdr->e_entry), architectureBitWidths, 1, *execfile);
+		fread(&(*ehdr->e_phoff), architectureBitWidths, 1, *execfile);
+		fread(&(*ehdr->e_shoff), architectureBitWidths, 1, *execfile);
+		fread(&(*ehdr->e_flags), 4, 1, *execfile);
+		fread(&(*ehdr->e_ehsize), 2, 1, *execfile);
+		fread(&(*ehdr->e_phentsize), 2, 1, *execfile);
+		fread(&(*ehdr->e_pnum), 2, 1, *execfile);
+		fread(&(*ehdr->e_shentsize), 2, 1, *execfile);
+		fread(&(*ehdr->e_shnum), 2, 1, *execfile);
+		fread(&(*ehdr->e_shstrndx), 2, 1, *execfile);
+
+}
+
+
+void read_Program_Header(Elf32_Phdr **program_table_header, FILE **execfile){
+		//TODO: USE DEFINES INSTEAD OF RAW VALUES
+		fread(&(*ehdr->e_type), 2, 1, *execfile);
+		fread(&(*ehdr->e_machine), 2, 1, *execfile);
+		fread(&(*ehdr->e_version), 4, 1, *execfile);
+		fread(&(*ehdr->e_entry), architectureBitWidths, 1, *execfile);
+		fread(&(*ehdr->e_phoff), architectureBitWidths, 1, *execfile);
+		fread(&(*ehdr->e_shoff), architectureBitWidths, 1, *execfile);
+		fread(&(*ehdr->e_flags), 4, 1, *execfile);
+		fread(&(*ehdr->e_ehsize), 2, 1, *execfile);
+		fread(&(*ehdr->e_phentsize), 2, 1, *execfile);
+		fread(&(*ehdr->e_pnum), 2, 1, *execfile);
+		fread(&(*ehdr->e_shentsize), 2, 1, *execfile);
+		fread(&(*ehdr->e_shnum), 2, 1, *execfile);
+		fread(&(*ehdr->e_shstrndx), 2, 1, *execfile);
+
+}
 
 int checkE_Ident(unsigned char* e_Ident){
 	if(e_Ident[0] == 0x7f && e_Ident[1] == 'E' && e_Ident[2] == 'L' && e_Ident[3] == 'F' ){
 		if(e_Ident[4] == ELFCLASS64)
-		 architectureBitWidths = 64;
+			architectureBitWidths = 64;
 		return 0;
 	}else
 		return -1;
