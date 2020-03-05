@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <gnu/lib-names.h> 
 
 #define IMAGE_FILE "./image"
 #define ARGS "[--extended] [--vm] <bootblock> <executable-file> ..."
@@ -19,10 +20,64 @@
 #define HALF_WORD_SIZE 2
 #define BUFFER_SIZE 200 			/* error buffer size in bytes */
 
+#define bootblock_arg(ARGC) ((ARGC) - 2) /* Function-like Macro to calculate bootblock filename index in argv */
+#define kernel_arg(ARGC) ((ARGC) - 1) 	 /* Function-like Macro to calculate kernel filename index in argv */
+
 char error_buffer[BUFFER_SIZE]; 
 int architecture_bit_width = 32; 	/* may be 64 in other arcthitectures */
 
-int handle_file_open(FILE *file_stream, const char *file_name, const char* mode);
+//TODO move function signatures to the upper part of the file for organization purposes
+//int handle_file_open(FILE *file_stream, const char *file_name, const char* mode);
+
+/*
+ * Function:  handle_file_open 
+ * --------------------
+ * Tries to open the given file and handle errors
+ * 
+ *  file_stream: pointer to assign the file_stream if the file has been opened
+ *	file_name: path for the file to be open	
+ *	mode: file open mode (e.g. - r, w, rb...)
+ * 
+ *  returns: zero if the file was opened succesfully
+ *           returns -1 on error
+ */
+int handle_file_open(FILE *file_stream, const char* mode, const char *file_name) 
+{
+	file_stream = fopen(file_name, mode);
+	if (file_stream == NULL) {
+		snprintf(error_buffer, BUFFER_SIZE, "Could not open file \"%s\"", file_name);
+		perror(error_buffer);
+		return -1;
+	}
+	
+	return 0;
+}
+
+void debug_elf(Elf32_Ehdr *ehdr_pointer, Elf32_Phdr *phdr_pointer) 
+{
+	printf("-------------------------------------------------------------------");
+	printf("\t|e_type|\t|e_machine|\t|e_version|\t|e_entry|\t|e_phoff|\t|e_shoff|\t"
+			"|e_flags|\t|e_ehsize|\t|e_phentsize|\t|e_phnum|\t|e_shentsize|\t"
+			"|e_shnum|\t|e_shstrndx|\t\n");
+	printf("\t|%08x|\t", ehdr_pointer->e_type);
+	printf("\t|%08x|\t",ehdr_pointer->e_machine);
+	printf("\t|%08x|\t",ehdr_pointer->e_version);
+	printf("\t|%08x|\t",ehdr_pointer->e_entry);
+	printf("\t|%08x|\t",ehdr_pointer->e_phoff);
+	printf("\t|%08x|\t",ehdr_pointer->e_shoff);
+	printf("\t|%08x|\t",ehdr_pointer->e_flags);
+	printf("\t|%08x|\t",ehdr_pointer->e_ehsize);
+	printf("\t|%08x|\t",ehdr_pointer->e_phentsize);
+	printf("\t|%08x|\t",ehdr_pointer->e_phnum);
+	printf("\t|%08x|\t",ehdr_pointer->e_shentsize);
+	printf("\t|%08x|\t",ehdr_pointer->e_shnum);
+	printf("\t|%08x|\t\n",ehdr_pointer->e_shstrndx);
+	/*for (uint16_t i = 0; i < _phnum; i++) // loop through program header
+	{
+		
+	}
+	*/
+}
 
 /* Reads the contents of the elf header and store them. */
 void read_elf_header(Elf32_Ehdr *ehdr_pointer, FILE *execfile)
@@ -106,7 +161,7 @@ Elf32_Phdr *read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr)
 	FILE *execfile_pointer;   /* code readability     */
 	uint16_t num_program_entries;
 
-	handle_file_open(filename, "rb", *execfile);
+	handle_file_open(*execfile, "rb", filename);
 
 	if (execfile != NULL && *execfile != NULL)
 	{	
@@ -199,14 +254,15 @@ int main(int argc, char **argv)
 	}
 	
 	/* build image file */
-	handle_file_open(IMAGE_FILE, "wb", imagefile);
+	handle_file_open(imagefile, "wb", IMAGE_FILE);
 
 	/* read executable bootblock file */
-
+	boot_program_header = read_exec_file(&bootfile, argv[bootblock_arg(argc)], &boot_header);
+	debug_elf(boot_header, boot_program_header);
 	/* write bootblock */
 
 	/* read executable kernel file */
-
+	kernel_program_header = read_exec_file(&kernelfile, argv[kernel_arg(argc)], &kernel_header);
 	/* write kernel segments to image */
 
 	/* tell the bootloader how many sectors to read to load the kernel */
@@ -224,26 +280,3 @@ int main(int argc, char **argv)
 	return 0;
 } // ends main()
 
-/*
- * Function:  handle_file_open 
- * --------------------
- * Tries to open the given file and handle errors
- * 
- *  file_stream: pointer to assign the file_stream if the file has been opened
- *	file_name: path for the file to be open	
- *	mode: file open mode (e.g. - r, w, rb...)
- * 
- *  returns: zero if the file was opened succesfully
- *           returns -1 on error
- */
-int handle_file_open(FILE *file_stream, const char* mode, const char *file_name) 
-{
-	file_stream = fopen(file_name, mode);
-	if (file_stream == NULL) {
-		snprintf(error_buffer, BUFFER_SIZE, "Could not open file \"%s\"", file_name);
-		perror(error_buffer);
-		return -1;
-	}
-	
-	return 0;
-}
