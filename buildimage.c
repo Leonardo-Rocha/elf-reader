@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <gnu/lib-names.h> 
 
 #define IMAGE_FILE "./image"
 #define ARGS "[--extended] [--vm] <bootblock> <executable-file> ..."
@@ -55,23 +54,24 @@ int handle_file_open(FILE *file_stream, const char* mode, const char *file_name)
 
 void debug_elf(Elf32_Ehdr *ehdr_pointer, Elf32_Phdr *phdr_pointer) 
 {
-	printf("-------------------------------------------------------------------");
-	printf("\t|e_type|\t|e_machine|\t|e_version|\t|e_entry|\t|e_phoff|\t|e_shoff|\t"
-			"|e_flags|\t|e_ehsize|\t|e_phentsize|\t|e_phnum|\t|e_shentsize|\t"
-			"|e_shnum|\t|e_shstrndx|\t\n");
-	printf("\t|%08x|\t", ehdr_pointer->e_type);
-	printf("\t|%08x|\t",ehdr_pointer->e_machine);
-	printf("\t|%08x|\t",ehdr_pointer->e_version);
-	printf("\t|%08x|\t",ehdr_pointer->e_entry);
-	printf("\t|%08x|\t",ehdr_pointer->e_phoff);
-	printf("\t|%08x|\t",ehdr_pointer->e_shoff);
-	printf("\t|%08x|\t",ehdr_pointer->e_flags);
-	printf("\t|%08x|\t",ehdr_pointer->e_ehsize);
-	printf("\t|%08x|\t",ehdr_pointer->e_phentsize);
-	printf("\t|%08x|\t",ehdr_pointer->e_phnum);
-	printf("\t|%08x|\t",ehdr_pointer->e_shentsize);
-	printf("\t|%08x|\t",ehdr_pointer->e_shnum);
-	printf("\t|%08x|\t\n",ehdr_pointer->e_shstrndx);
+	printf("-------------------------------------------------------------------"
+			"-------------------------------------------------------------------\n");
+	printf("|e_type|  |e_machine|  |e_version|  |e_entry|  |e_phoff|  |e_shoff|  "
+			"|e_flags|  |e_ehsize|  |e_phentsize|  |e_phnum|  |e_shentsize|  "
+			"|e_shnum|  |e_shstrndx|  \n");
+	printf("|%08x|  ", ehdr_pointer->e_type);
+	printf("  |%08x|  ",ehdr_pointer->e_machine);
+	printf("  |%08x|  ",ehdr_pointer->e_version);
+	printf("  |%08x|  ",ehdr_pointer->e_entry);
+	printf("  |%08x|  ",ehdr_pointer->e_phoff);
+	printf("  |%08x|  ",ehdr_pointer->e_shoff);
+	printf("  |%08x|  ",ehdr_pointer->e_flags);
+	printf("  |%08x|  ",ehdr_pointer->e_ehsize);
+	printf("  |%08x|  ",ehdr_pointer->e_phentsize);
+	printf("  |%08x|  ",ehdr_pointer->e_phnum);
+	printf("  |%08x|  ",ehdr_pointer->e_shentsize);
+	printf("  |%08x|  ",ehdr_pointer->e_shnum);
+	printf("  |%08x|  \n",ehdr_pointer->e_shstrndx);
 	/*for (uint16_t i = 0; i < _phnum; i++) // loop through program header
 	{
 		
@@ -161,8 +161,9 @@ Elf32_Phdr *read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr)
 	FILE *execfile_pointer;   /* code readability     */
 	uint16_t num_program_entries;
 
-	handle_file_open(*execfile, "rb", filename);
-
+	//TODO: fix execfile argument s
+	//handle_file_open(*execfile, "rb", filename);
+	/*
 	if (execfile != NULL && *execfile != NULL)
 	{	
 		ehdr = (Elf32_Ehdr **) malloc(sizeof(Elf32_Ehdr *));
@@ -197,6 +198,7 @@ Elf32_Phdr *read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr)
 		perror(error_buffer);
 		return NULL;
 	}
+	*/
 }
 
 /* Writes the bootblock to the image file */
