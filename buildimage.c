@@ -58,6 +58,12 @@ int handle_file_open(FILE **file_stream, const char* mode, const char *file_name
 
 void debug_elf(Elf32_Ehdr *ehdr_pointer, Elf32_Phdr *phdr_pointer) 
 {	
+	char ehdr_fields[13][20] = {"e_type", "e_machine", "e_version", "e_entry","e_phoff", "e_shoff",
+			"e_flags",  "e_ehsize", "e_phentsz", "e_phnum", "e_shentsz",
+			"e_shnum", "e_shstrndx"};
+	char phdr_fields[9][20] = {"entry_num","p_type", "p_offset", "p_vaddr", "p_paddr","p_filesz", "p_memsz",
+			"p_flags",  "p_align"};
+
 	printf("Magic Number: ");
 	for (int i = 0; i < 16; i++) 
 	{
@@ -66,11 +72,8 @@ void debug_elf(Elf32_Ehdr *ehdr_pointer, Elf32_Phdr *phdr_pointer)
 	printf("\n-------------------------------------------------------------------"
 			"-------------------------------------------------------------------"
 			"-----------------------------------\n");
-	char ehdr_fields[13][20] = {"e_type", "e_machine", "e_version", "e_entry","e_phoff", "e_shoff",
-			"e_flags",  "e_ehsize", "e_phentsz", "e_phnum", "e_shentsz",
-			"e_shnum", "e_shstrndx"};
 
-	for (int i; i < 13; i++)
+	for (int i = 0; i < 13; i++)
 	{
 		printf("%-12s", ehdr_fields[i]);
 	}
@@ -90,11 +93,29 @@ void debug_elf(Elf32_Ehdr *ehdr_pointer, Elf32_Phdr *phdr_pointer)
 	printf("%-12.08x", ehdr_pointer->e_shnum);
 	printf("%-12.08x", ehdr_pointer->e_shstrndx);
 	printf("\n");
-	/*for (uint16_t i = 0; i < _phnum; i++) // loop through program header
+
+	printf("\n");
+	for (int i = 0; i < 9; i++)
 	{
-		
+		printf("%-12s", phdr_fields[i]);
 	}
-	*/
+	printf("\n");
+	//TODO: Investigate suspicious missing 2 bytes in bless of the field p_type 
+	for (uint16_t i = 0; i < ehdr_pointer->e_phnum; i++) // loop through program header sections
+	{
+		printf("%-12d", i);
+		printf("%-12.08x", phdr_pointer[i].p_type);
+		printf("%-12.08x", phdr_pointer[i].p_offset);
+		printf("%-12.08x", phdr_pointer[i].p_vaddr);
+		printf("%-12.08x", phdr_pointer[i].p_paddr);
+		printf("%-12.08x", phdr_pointer[i].p_filesz);
+		printf("%-12.08x", phdr_pointer[i].p_memsz);
+		printf("%-12.08x", phdr_pointer[i].p_flags);
+		printf("%-12.08x", phdr_pointer[i].p_align);
+		printf("\n");
+	}
+	printf("\n");
+	
 }
 
 /* Reads the contents of the elf header and store them. */
@@ -220,7 +241,7 @@ Elf32_Phdr *read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr)
 /* Writes the bootblock to the image file */
 void write_bootblock(FILE **imagefile, FILE *bootfile, Elf32_Ehdr *boot_header, Elf32_Phdr *boot_phdr)
 {
-
+	
 }
 
 /* Writes the kernel to the image file */
