@@ -23,7 +23,7 @@
 #define kernel_arg(ARGC) ((ARGC) - 1) 	 /* Function-like Macro to calculate kernel filename index in argv */
 
 char error_buffer[BUFFER_SIZE]; 
-int architecture_bit_width = 32; 	/* may be 64 in other arcthitectures */
+int architecture_bit_width = 4; 	/* 4 bytes = 32 Bit Architecture */
 
 //TODO move function signatures to the upper part of the file for organization purposes
 //int handle_file_open(FILE *file_stream, const char *file_name, const char* mode);
@@ -40,38 +40,56 @@ int architecture_bit_width = 32; 	/* may be 64 in other arcthitectures */
  *  returns: zero if the file was opened succesfully
  *           returns -1 on error
  */
-int handle_file_open(FILE *file_stream, const char* mode, const char *file_name) 
-{
-	file_stream = fopen(file_name, mode);
-	if (file_stream == NULL) {
-		snprintf(error_buffer, BUFFER_SIZE, "Could not open file \"%s\"", file_name);
-		perror(error_buffer);
-		return -1;
+int handle_file_open(FILE **file_stream, const char* mode, const char *file_name) 
+{	
+	if(file_stream != NULL) 
+	{
+		*file_stream = fopen(file_name, mode);
+		if (*file_stream == NULL) 
+		{
+			snprintf(error_buffer, BUFFER_SIZE, "Could not open file \"%s\"", file_name);
+			perror(error_buffer);
+			return -1;
+		}
 	}
-	
+			
 	return 0;
 }
 
 void debug_elf(Elf32_Ehdr *ehdr_pointer, Elf32_Phdr *phdr_pointer) 
-{
-	printf("-------------------------------------------------------------------"
-			"-------------------------------------------------------------------\n");
-	printf("|e_type|  |e_machine|  |e_version|  |e_entry|  |e_phoff|  |e_shoff|  "
-			"|e_flags|  |e_ehsize|  |e_phentsize|  |e_phnum|  |e_shentsize|  "
-			"|e_shnum|  |e_shstrndx|  \n");
-	printf("|%08x|  ", ehdr_pointer->e_type);
-	printf("  |%08x|  ",ehdr_pointer->e_machine);
-	printf("  |%08x|  ",ehdr_pointer->e_version);
-	printf("  |%08x|  ",ehdr_pointer->e_entry);
-	printf("  |%08x|  ",ehdr_pointer->e_phoff);
-	printf("  |%08x|  ",ehdr_pointer->e_shoff);
-	printf("  |%08x|  ",ehdr_pointer->e_flags);
-	printf("  |%08x|  ",ehdr_pointer->e_ehsize);
-	printf("  |%08x|  ",ehdr_pointer->e_phentsize);
-	printf("  |%08x|  ",ehdr_pointer->e_phnum);
-	printf("  |%08x|  ",ehdr_pointer->e_shentsize);
-	printf("  |%08x|  ",ehdr_pointer->e_shnum);
-	printf("  |%08x|  \n",ehdr_pointer->e_shstrndx);
+{	
+	printf("Magic Number: ");
+	for (int i = 0; i < 16; i++) 
+	{
+		printf("\'%02x\' ", ehdr_pointer->e_ident[i]);
+	}
+	printf("\n-------------------------------------------------------------------"
+			"-------------------------------------------------------------------"
+			"-----------------------------------\n");
+	char ehdr_fields[13][20] = {"e_type", "e_machine", "e_version", "e_entry","e_phoff", "e_shoff",
+			"e_flags",  "e_ehsize", "e_phentsz", "e_phnum", "e_shentsz",
+			"e_shnum", "e_shstrndx"};
+
+	for (int i; i < 13; i++)
+	{
+		printf("%-12s", ehdr_fields[i]);
+	}
+	
+	printf("\n");
+	printf("%-12.08x", ehdr_pointer->e_type);
+	printf("%-12.08x", ehdr_pointer->e_machine);
+	printf("%-12.08x", ehdr_pointer->e_version);
+	printf("%-12.08x", ehdr_pointer->e_entry);
+	printf("%-12.08x", ehdr_pointer->e_phoff);
+	printf("%-12.08x", ehdr_pointer->e_shoff);
+	printf("%-12.08x", ehdr_pointer->e_flags);
+	printf("%-12.08x", ehdr_pointer->e_ehsize);
+	printf("%-12.08x", ehdr_pointer->e_phentsize);
+	printf("%-12.08x", ehdr_pointer->e_phnum);
+	printf("%-12.08x", ehdr_pointer->e_shentsize);
+	printf("%-12.08x", ehdr_pointer->e_shnum);
+	printf("%-12.08x", ehdr_pointer->e_shstrndx);
+	printf("\n");
 	/*for (uint16_t i = 0; i < _phnum; i++) // loop through program header
 	{
 		
@@ -162,18 +180,16 @@ Elf32_Phdr *read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr)
 	uint16_t num_program_entries;
 
 	//TODO: fix execfile argument s
-	//handle_file_open(*execfile, "rb", filename);
-	/*
+	handle_file_open(execfile, "rb", filename);
+	
 	if (execfile != NULL && *execfile != NULL)
 	{	
-		ehdr = (Elf32_Ehdr **) malloc(sizeof(Elf32_Ehdr *));
-		*ehdr = (Elf32_Ehdr *) malloc(sizeof(Elf32_Ehdr));
-
 		ehdr_pointer = *ehdr;
 		execfile_pointer = *execfile;
 
 		// read e_ident
-		fread(&(ehdr_pointer->e_ident), 1, EI_NIDENT, execfile_pointer);
+		fread(ehdr_pointer->e_ident, sizeof(char), EI_NIDENT, *execfile);
+		
 		if (check_e_Ident(ehdr_pointer->e_ident) != -1)
 		{	
 			//Read each term in the ELF Header
@@ -190,7 +206,7 @@ Elf32_Phdr *read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr)
 		{
 			fprintf(stderr, "File isn't in proper ELF format: \"%s\" \n", filename);
 			return NULL;
-		}	
+		}
 	}
 	else
 	{	// File open error
@@ -198,7 +214,7 @@ Elf32_Phdr *read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr)
 		perror(error_buffer);
 		return NULL;
 	}
-	*/
+	
 }
 
 /* Writes the bootblock to the image file */
@@ -256,7 +272,7 @@ int main(int argc, char **argv)
 	}
 	
 	/* build image file */
-	handle_file_open(imagefile, "wb", IMAGE_FILE);
+	handle_file_open(&imagefile, "wb", IMAGE_FILE);
 
 	/* read executable bootblock file */
 	boot_program_header = read_exec_file(&bootfile, argv[bootblock_arg(argc)], &boot_header);
