@@ -18,10 +18,11 @@
 #define WORD_SIZE 4					/* size of the word used in 32 Bit Architecture */
 #define HALF_WORD_SIZE 2
 #define BUFFER_SIZE 200 			/* error buffer size in bytes */
-#define SECTION_HEADER_SIZE 40 		/* size of a section header in bytes*/
 
 #define bootblock_arg(ARGC) ((ARGC) - 2) /* Function-like Macro to calculate bootblock filename index in argv */
 #define kernel_arg(ARGC) ((ARGC) - 1) 	 /* Function-like Macro to calculate kernel filename index in argv */
+#define header_type(TYPE) ((TYPE) == (1)?(Elf32_Shdr*) : (Elf32_Phdr*))
+
 
 char error_buffer[BUFFER_SIZE]; 
 int architecture_bit_width = 4; 	/* 4 bytes = 32 Bit Architecture */
@@ -158,9 +159,9 @@ void read_section_header(Elf32_Shdr *shdr_pointer, FILE *execfile)
 	fread(&(shdr_pointer->sh_offset), WORD_SIZE, 1, execfile);
 	fread(&(shdr_pointer->sh_size), WORD_SIZE, 1, execfile);
 	fread(&(shdr_pointer->sh_link), WORD_SIZE, 1, execfile);
-	fread(&(shdr_pointer->sh_info), WORD_SIZE, 1, bootfile);
-	fread(&(shdr_pointer->sh_addralign), WORD_SIZE, 1, bootfile);
-	fread(&(shdr_pointer->sh_entsize), WORD_SIZE, 1, bootfile);
+	fread(&(shdr_pointer->sh_info), WORD_SIZE, 1, execfile);
+	fread(&(shdr_pointer->sh_addralign), WORD_SIZE, 1, execfile);
+	fread(&(shdr_pointer->sh_entsize), WORD_SIZE, 1, execfile);
 }
 
 
@@ -250,39 +251,98 @@ Elf32_Phdr *read_exec_file(FILE **execfile, char *filename, Elf32_Ehdr **ehdr)
 		perror(error_buffer);
 		return NULL;
 	}
-	
 }
 
+/*
+ * Function:  read_sections_or_segments 
+ * --------------------
+ * Reads each section or segment of the given header
+ * 
+ *  execfile: executable file stream
+ *	elf_header: ELF Header reference
+ *	header: a section or program header
+ *  header_type: 's': section
+ * 				 'p': program
+ * 
+ *  returns: the buffer with the read content
+ *           
+ */
+unsigned char** read_sections_or_segments(FILE *execfile, Elf32_Ehdr *elf_header, void* header, unsigned char header_type)
+{	
+	uint16_t header_size, num_entries;
+	uint32_t header_offset, entry_size; // Used inside the for loop to store the size of each entry
+	Elf32_Shdr* section_header = NULL;
+	Elf32_Phdr* program_header = NULL;
+	uint8_t header_type_int;
+	/*
+	void* type =
+	
+	if(header_type = 's') 
+		header_type_int = 1;
+	else if(header_type == 'p')
+		header_type_int = 2;
+	
+	header_size = ((header_type(header_type_int)) header)
+	*/
+	//TODO: how to do generic enough???
+	// 1- MACRO FUNCTIONS -> use this to get the type and the access field -> does it work?
+	
+
+}
+
+//TODO: refactor this function
 /* Writes the bootblock to the image file */
 void write_bootblock(FILE **imagefile, FILE *bootfile, Elf32_Ehdr *boot_header, Elf32_Phdr *boot_phdr)
-{
-	int num_sections = boot_header->e_shnum;
-	int section_size = boot_header->e_shentsize;
-	uint32_t section_offset =  boot_header->sh_offset;
-	//Alocate sections for reading
-	Elf32_Shdr* sections_headers = (Elf32_Shdr*) malloc(num_sections* sizeof(Elf32_Shdr));
+{	
+	uint16_t program_header_size = boot_header->e_phentsize;
+	uint16_t section_header_size = boot_header->e_shentsize;
+	uint16_t num_sections = boot_header->e_shnum;
+	uint16_t num_segments = boot_header->e_phnum;
+	uint32_t sections_offset =  boot_header->e_shoff;
+	uint32_t segments_offset = boot_header->e_phoff;
+	uint32_t section_size; // Used inside the sections for loop to store the size of each section
+	uint32_t segment_size; // Used inside the segments for loop to store the size of each segment
+
+	unsigned char **segments_buffer = (unsigned char **) malloc(num_segments * sizeof(unsigned char*));
+
+	// Allocate sections for reading
+	Elf32_Shdr* sections_headers = (Elf32_Shdr*) malloc(num_sections * sizeof(Elf32_Shdr));
 	
 	// Buffer to store the content of each section
-	unsigned char sections_buffer[num_sections][section_size];
+	unsigned char **sections_buffer = (unsigned char **) malloc(num_sections * sizeof(unsigned char*));
+
+	for (int i = 0; i < num_segments; i++)
+	{
+		
+	}
 	
 
-	//Loop through all sections; Read each Header and section content.
-	for (int i = 0; i < num_sections , i++)
-	{
-		//Deslocate the file cursor from the beginning to the Section Header table
-		fseek(bootfile, section_offset + i*SECTION_HEADER_SIZE, SEEK_SET);		
+	//---------------------------------SECTIONS---------------------------------
+	// Loop through all sections; Read each Header and section content.
+	for (int i = 0; i < num_sections; i++)
+	{	
+		// Offsets the file cursor from the beginning to the Section Header table
+		fseek(bootfile, sections_offset + i*section_header_size, SEEK_SET);		
 		read_section_header(&(sections_headers[i]), bootfile);
 
-		//Deslocate cursor from the Section Header table to the given section
+		section_size = sections_headers[i].sh_size;
+		sections_buffer[i] = (unsigned char *) malloc(section_size * sizeof(unsigned char)); 
+
+		// Offsets the file cursor from the Section Header table to the given section
 		fseek(bootfile, sections_headers[i].sh_offset, SEEK_SET);
 		fread(sections_buffer[i], 1, section_size, bootfile);
 	}
 
-	//Write sections in Image
-	for (int i = 0; i <num_sections , i++)
-	{
-		//fseek(bootfile, sections_headers[i].sh_offset, SEEK_SET);
-		fwrite(sections_buffer[i], 1, section_size, *imagefile);
+	// Write sections in Image
+	for (int i = 0; i < num_sections; i++)
+	{	
+		if (sections_headers[i].sh_addr != 0) /* This member gives the address at which the section’s first byte */ 
+		{									  /* should reside. If this member == 0, the section should not be written.*/	
+			section_size = sections_headers[i].sh_size;
+			// Offsets imagefile cursor from the beginning to the given section address
+			fseek(*imagefile, sections_headers[i].sh_addr, SEEK_SET);
+			fwrite(sections_buffer[i], 1, section_size, *imagefile);
+		}
 	}
 }
 
