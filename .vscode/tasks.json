@@ -1,19 +1,9 @@
 {
-    "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build Program",
             "type": "shell",
-            "command": "make",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "type": "shell",
-            "label": "gcc-7 build active file",
-            "command": "/usr/bin/gcc-7",
+            "label": "gcc build active file",
+            "command": "/usr/bin/gcc",
             "args": [
                 "-g",
                 "${file}",
@@ -24,5 +14,6 @@
                 "cwd": "/usr/bin"
             }
         }
-    ]
+    ],
+    "version": "2.0.0"
 }
