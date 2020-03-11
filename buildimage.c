@@ -275,6 +275,18 @@ void read_entry(FILE *execfile, unsigned char **buffer, uint32_t offset, uint32_
 }
 
 //TODO: refactor this function
+void read_sections(FILE *execfile, unsigned char **sections_buffer, Elf32_Shdr** sections_headers, uint16_t num_sections, uint16_t section_header_size, uint32_t sections_offset ){	
+	for (int i = 0; i < num_sections; i++)
+	{	
+		sections_headers[i] = (Elf32_Shdr*) malloc(sizeof(Elf32_Shdr));
+		// Offsets the file cursor from the beginning to the Section Header table
+		fseek(bootfile, sections_offset + i*section_header_size, SEEK_SET);		
+		read_section_header(sections_headers[i], bootfile);
+
+		read_entry(bootfile, &(sections_buffer[i]), sections_headers[i]->sh_offset, sections_headers[i]->sh_size);
+	}
+}
+
 /* Writes the bootblock to the image file */
 void write_bootblock(FILE **imagefile, FILE *bootfile, Elf32_Ehdr *boot_header, Elf32_Phdr *boot_phdr)
 {	
@@ -300,15 +312,7 @@ void write_bootblock(FILE **imagefile, FILE *bootfile, Elf32_Ehdr *boot_header, 
 	
 	//---------------------------------SECTIONS---------------------------------
 	// Loop through all sections; Read each Header and section content.
-	for (int i = 0; i < num_sections; i++)
-	{	
-		sections_headers[i] = (Elf32_Shdr*) malloc(sizeof(Elf32_Shdr));
-		// Offsets the file cursor from the beginning to the Section Header table
-		fseek(bootfile, sections_offset + i*section_header_size, SEEK_SET);		
-		read_section_header(sections_headers[i], bootfile);
-
-		read_entry(bootfile, &(sections_buffer[i]), sections_headers[i]->sh_offset, sections_headers[i]->sh_size);
-	}
+	read_sections(bootfile, sections_buffer, sections_headers, num_sections, section_header_size, sections_offset);
 		
 	// Write sections in Image
 	for (int i = 0; i < num_sections; i++)
