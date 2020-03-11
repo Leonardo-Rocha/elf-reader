@@ -479,6 +479,10 @@ void write_kernel(FILE **imagefile, FILE *kernelfile, Elf32_Ehdr *kernel_header,
 
 	read_sections(kernelfile, sections_buffer, sections_headers, kernel_header);	
 	write_sections(imagefile, sections_buffer, sections_headers, kernel_header->e_shnum, KERNEL_IMAGE_OFFSET);
+
+	free(sections_headers);
+	free(sections_buffer);
+	free(program_buffer);
 }
 
 /*
@@ -628,6 +632,8 @@ int main(int argc, char **argv)
 
 	free(boot_header);
 	free(kernel_header);
+	free(kernel_program_header);
+	free(boot_program_header);
 	
 	return 0;
 } // ends main()
