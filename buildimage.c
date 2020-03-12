@@ -19,7 +19,7 @@
 #define HALF_WORD_SIZE 2
 #define BUFFER_SIZE 200 					/* error buffer size in bytes */
 #define BOOTBLOCK_IMAGE_OFFSET 0 
-#define KERNEL_IMAGE_OFFSET SECTOR_SIZE
+#define KERNEL_IMAGE_OFFSET 0//SECTOR_SIZE
 #define BOOTLOADER_KERNEL_SECTORS_OFFSET 2
 #define TRUE 1
 #define FALSE 0
@@ -358,6 +358,7 @@ void write_sections(FILE **imagefile, unsigned char **sections_buffer, Elf32_Shd
 		if (sections_headers[i].sh_addr != 0)  /* This member gives the address at which the section’s first byte       */ 
 		{									   /* should reside. If this member == 0, the section should not be written.*/	
 			// Offsets imagefile cursor from the beginning to the given section address
+			printf("A CARALHO SECTION ESCRITA i = %d\n", i);
 			fseek(*imagefile, sections_headers[i].sh_addr + image_offset, SEEK_SET);
 			fwrite(sections_buffer[i], 1, sections_headers[i].sh_size, *imagefile);
 		}
@@ -525,8 +526,12 @@ int count_kernel_sectors(Elf32_Ehdr *kernel_header, Elf32_Phdr *kernel_phdr)
  */
 void record_kernel_sectors(FILE **imagefile, Elf32_Ehdr *kernel_header, Elf32_Phdr *kernel_phdr, int num_sec)
 {
+	unsigned char magic_number[2] = {0xAA, 0x55};
 	fseek(*imagefile, BOOTLOADER_KERNEL_SECTORS_OFFSET, SEEK_SET);
 	fwrite(&num_sec, 1, 1, *imagefile);
+	// Write magic Number
+	fseek(*imagefile, BOOTLOADER_SIG_OFFSET, SEEK_SET);
+	fwrite(magic_number, 2, 1, *imagefile);
 }
 
 /*
@@ -541,14 +546,15 @@ void record_kernel_sectors(FILE **imagefile, Elf32_Ehdr *kernel_header, Elf32_Ph
  */
 void print_segments_info(Elf32_Phdr *program_header, int _phnum, int is_kernel) 
 {
+	int num_sectors = 0;
 	for(int i = 0; i < _phnum; i++)
 	{
+		num_sectors += (program_header[i].p_memsz/512 + ((program_header[i].p_memsz % SECTOR_SIZE) > 0 ? 1 : 0) + is_kernel);
 		printf("\tsegment %d\n", i);
 		printf("\t\toffset 0x%04x\t\tvaddr 0x%04x\n", program_header[i].p_offset, program_header[i].p_vaddr);
 		printf("\t\tfilesz 0x%04x\t\tmemsz 0x%04x\n", program_header[i].p_filesz, program_header[i].p_memsz);
 		printf("\t\twriting 0x%04x bytes\n", program_header[i].p_memsz);
-		printf("\t\tpadding up to 0x%04x\n", 
-		SECTOR_SIZE * (program_header[i].p_memsz/512 + ((program_header[i].p_memsz % SECTOR_SIZE) > 0 ? 1 : 0) + is_kernel));
+		printf("\t\tpadding up to 0x%04x\n", SECTOR_SIZE * num_sectors);
 	}
 }
 
