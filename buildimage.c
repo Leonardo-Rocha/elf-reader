@@ -19,7 +19,7 @@
 #define HALF_WORD_SIZE 2
 #define BUFFER_SIZE 200 					/* error buffer size in bytes */
 #define BOOTBLOCK_IMAGE_OFFSET 0 
-#define KERNEL_IMAGE_OFFSET 0//SECTOR_SIZE
+#define KERNEL_IMAGE_OFFSET SECTOR_SIZE
 #define BOOTLOADER_KERNEL_SECTORS_OFFSET 2
 #define TRUE 1
 #define FALSE 0
@@ -188,6 +188,7 @@ void read_section_header(Elf32_Shdr *shdr_pointer, FILE *execfile)
 	fread(&(shdr_pointer->sh_name), WORD_SIZE, 1, execfile);
 	fread(&(shdr_pointer->sh_type), WORD_SIZE, 1, execfile);
 	fread(&(shdr_pointer->sh_flags), WORD_SIZE, 1, execfile);
+	fread(&(shdr_pointer->sh_addr), WORD_SIZE, 1, execfile);
 	fread(&(shdr_pointer->sh_offset), WORD_SIZE, 1, execfile);
 	fread(&(shdr_pointer->sh_size), WORD_SIZE, 1, execfile);
 	fread(&(shdr_pointer->sh_link), WORD_SIZE, 1, execfile);
@@ -330,7 +331,6 @@ void read_sections(FILE *execfile, unsigned char **sections_buffer, Elf32_Shdr* 
 
 	for (int i = 0; i < num_sections; i++)
 	{	
-		//sections_headers[i] = (Elf32_Shdr*) malloc(sizeof(Elf32_Shdr));
 		// Offsets the file cursor from the beginning to the Section Header table
 		fseek(execfile, sections_offset + i*section_header_size, SEEK_SET);		
 		read_section_header(&(sections_headers[i]), execfile);
@@ -352,18 +352,34 @@ void read_sections(FILE *execfile, unsigned char **sections_buffer, Elf32_Shdr* 
  */
 void write_sections(FILE **imagefile, unsigned char **sections_buffer, Elf32_Shdr* sections_headers, 
 	uint32_t num_sections, uint32_t image_offset)
-{
+{	
+	uint32_t addr;
 	for (int i = 0; i < num_sections; i++)
 	{	
-		if (sections_headers[i].sh_addr != 0)  /* This member gives the address at which the section’s first byte       */ 
-		{									   /* should reside. If this member == 0, the section should not be written.*/	
+		addr = sections_headers[i].sh_addr;
+		if (addr != 0)  /* This member gives the address at which the section’s first byte       */ 
+		{	            /* should reside. If this member == 0, the section should not be written.*/	
 			// Offsets imagefile cursor from the beginning to the given section address
-			printf("A CARALHO SECTION ESCRITA i = %d\n", i);
 			fseek(*imagefile, sections_headers[i].sh_addr + image_offset, SEEK_SET);
 			fwrite(sections_buffer[i], 1, sections_headers[i].sh_size, *imagefile);
 		}
 		free(sections_buffer[i]);
 	}
+}
+
+/*
+ * Function:  zero_padding
+ * --------------------
+ * Zero-pads a file from the current cursor position to the padding size 
+ * 
+ *  imagefile
+ *	padding_size
+ */
+void zero_padding(FILE **imagefile, uint32_t padding_size)
+{
+	unsigned char* padded_buffer = (unsigned char *) calloc(padding_size, sizeof(unsigned char));
+	fwrite(padded_buffer, 1, padding_size, *imagefile);
+	free(padded_buffer);
 }
 
 /*
@@ -380,23 +396,29 @@ void write_sections(FILE **imagefile, unsigned char **sections_buffer, Elf32_Shd
 void write_program_segments(FILE **imagefile, unsigned char **program_buffer, Elf32_Phdr *program_header, 
 	uint32_t num_programs, uint32_t image_offset)
 {	
-	uint32_t padding_size; 		  /* When the segment size in memory is bigger than  */
-	unsigned char *padded_buffer; /* it's size in file, it must be zero-padded.     */
+	uint32_t padding_size; 
+	uint64_t image_cursor_position;
+
+	fseek(*imagefile, image_offset, SEEK_SET);
 
 	for (int i = 0; i < num_programs; i++) 		
 	{
-		fseek(*imagefile, program_header[i].p_vaddr + image_offset, SEEK_SET);
 		fwrite(program_buffer[i], 1, program_header[i].p_filesz, *imagefile);
 		
-		// Verify if padding is needed and do it
+		// When the segment size in memory is bigger than  it's size in file, it must be zero-padded.
 		padding_size = program_header[i].p_memsz - program_header[i].p_filesz;
 		if(padding_size > 0)
 		{
-			padded_buffer = (unsigned char *) calloc(padding_size, sizeof(unsigned char));
-			fwrite(padded_buffer, 1, padding_size, *imagefile);
-			free(padded_buffer);
+			zero_padding(imagefile, padding_size);
 		}
 		free(program_buffer[i]);
+	}
+
+	image_cursor_position = ftell(*imagefile);
+	if(image_cursor_position % SECTOR_SIZE) // if the last program doesn't complete the sector, it must be zero-padded
+	{
+		padding_size = SECTOR_SIZE - (image_cursor_position % SECTOR_SIZE);
+		zero_padding(imagefile, padding_size);
 	}
 }
 
@@ -445,7 +467,7 @@ void write_bootblock(FILE **imagefile, FILE *bootfile, Elf32_Ehdr *boot_header, 
 	write_program_segments(imagefile, program_buffer, boot_phdr, num_programs, BOOTBLOCK_IMAGE_OFFSET);	
 
 	read_sections(bootfile, sections_buffer, sections_headers, boot_header);	
-	write_sections(imagefile, sections_buffer, sections_headers, boot_header->e_shnum, BOOTBLOCK_IMAGE_OFFSET);
+	//write_sections(imagefile, sections_buffer, sections_headers, boot_header->e_shnum, BOOTBLOCK_IMAGE_OFFSET);
 
 	free(sections_headers);
 	free(sections_buffer);
@@ -479,7 +501,7 @@ void write_kernel(FILE **imagefile, FILE *kernelfile, Elf32_Ehdr *kernel_header,
 	write_program_segments(imagefile, program_buffer, kernel_phdr, num_programs, KERNEL_IMAGE_OFFSET);	
 
 	read_sections(kernelfile, sections_buffer, sections_headers, kernel_header);	
-	write_sections(imagefile, sections_buffer, sections_headers, kernel_header->e_shnum, KERNEL_IMAGE_OFFSET);
+	//write_sections(imagefile, sections_buffer, sections_headers, kernel_header->e_shnum, KERNEL_IMAGE_OFFSET);
 
 	free(sections_headers);
 	free(sections_buffer);
@@ -508,7 +530,7 @@ int count_kernel_sectors(Elf32_Ehdr *kernel_header, Elf32_Phdr *kernel_phdr)
 
 	num_sectors = sum_memsz / SECTOR_SIZE;
 
-	if (sum_memsz % SECTOR_SIZE > 0) 
+	if (sum_memsz % SECTOR_SIZE) 
 		num_sectors++;
 
 	return num_sectors;
@@ -526,7 +548,7 @@ int count_kernel_sectors(Elf32_Ehdr *kernel_header, Elf32_Phdr *kernel_phdr)
  */
 void record_kernel_sectors(FILE **imagefile, Elf32_Ehdr *kernel_header, Elf32_Phdr *kernel_phdr, int num_sec)
 {
-	unsigned char magic_number[2] = {0xAA, 0x55};
+	unsigned char magic_number[2] = {0x55, 0xAA};
 	fseek(*imagefile, BOOTLOADER_KERNEL_SECTORS_OFFSET, SEEK_SET);
 	fwrite(&num_sec, 1, 1, *imagefile);
 	// Write magic Number
