@@ -3,6 +3,9 @@
 
 CC = gcc
 LD = ld
+BI = bin/
+BU = build/
+RC = src/
 
 # Where to locate the kernel in memory
 KERNEL_ADDR	= 0x1000
@@ -43,11 +46,11 @@ all: bootblock buildimage kernel image
 kernel: kernel.o
 	$(LD) $(LDOPTS) -Ttext $(KERNEL_ADDR) -o kernel $<
 
-bootblock: bootblock.o
-	$(LD) $(LDOPTS) -Ttext 0x0 -o bootblock $<
+bootblock: $(BI)bootblock.o
+	$(LD) $(LDOPTS) -Ttext 0x0 -o $(BU)bootblock $<
 
 buildimage: buildimage.o
-	$(CC) -o buildimage $<
+	$(CC) -o $(BU)buildimage $<
 
 # Build an image to put on the floppy
 image: bootblock buildimage kernel
@@ -61,6 +64,7 @@ boot: image
 
 # Clean up!
 clean:
+	rm -f build/*
 	rm -f buildimage.o kernel.o
 	rm -f buildimage image bootblock kernel
 
@@ -74,7 +78,7 @@ distclean: clean
 
 # How to compile buildimage
 buildimage.o:
-	$(CC) -c -o buildimage.o buildimage.c
+	$(CC) -c -o $(BU)buildimage.o $(RC)buildimage.c
 
 # How to compile a C file
 %.o:%.c
